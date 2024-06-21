@@ -646,7 +646,7 @@ let builtin_trait_decls_info () =
       ~methods_with_extract:(Some [ ("from", "from_") ])
       ();
     (* Clone *)
-    mk_trait "core::clone::Clone" ~methods:[ "clone" ] ();
+    mk_trait "core::clone::Clone" ~methods:[ "clone"; "clone_from" ] ();
   ]
 
 let mk_builtin_trait_decls_map () =

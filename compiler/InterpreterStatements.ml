@@ -757,9 +757,7 @@ let eval_transparent_function_call_symbolic_inst (span : Meta.span)
                 (lazy ("trait impl: " ^ trait_impl_to_string ctx trait_impl));
               (* First look in the required methods *)
               let method_id =
-                List.find_opt
-                  (fun (s, _) -> s = method_name)
-                  trait_impl.required_methods
+                List.find_opt (fun (s, _) -> s = method_name) trait_impl.methods
               in
               match method_id with
               | Some (_, id) ->
@@ -795,66 +793,9 @@ let eval_transparent_function_call_symbolic_inst (span : Meta.span)
                     regions_hierarchy,
                     inst_sg )
               | None ->
-                  (* If not found, lookup the methods provided by the trait *declaration*
-                     (remember: for now, we forbid overriding provided methods) *)
-                  cassert __FILE__ __LINE__
-                    (trait_impl.provided_methods = [])
-                    span "Overriding provided methods is currently forbidden";
-                  let trait_decl =
-                    ctx_lookup_trait_decl ctx
-                      trait_ref.trait_decl_ref.trait_decl_id
-                  in
-                  let _, method_id =
-                    List.find
-                      (fun (s, _) -> s = method_name)
-                      trait_decl.provided_methods
-                  in
-                  let method_id = Option.get method_id in
-                  let method_def = ctx_lookup_fun_decl ctx method_id in
-                  (* For the instantiation we have to do something peculiar
-                     because the method was defined for the trait declaration.
-                     We have to group:
-                     - the parameters given to the trait decl reference
-                     - the parameters given to the method itself
-                     For instance:
-                     {[
-                       trait Foo<T> {
-                         fn f<U>(...) { ... }
-                       }
-
-                       fn g<G>(x : G) where Clause0: Foo<G, bool>
-                       {
-                         x.f::<u32>(...) // The arguments to f are: <G, bool, u32>
-                       }
-                     ]}
-                  *)
-                  let all_generics =
-                    TypesUtils.merge_generic_args
-                      trait_ref.trait_decl_ref.decl_generics func.generics
-                  in
-                  log#ldebug
-                    (lazy
-                      ("provided method call:" ^ "\n- method name: "
-                     ^ method_name ^ "\n- all_generics:\n"
-                      ^ generic_args_to_string ctx all_generics
-                      ^ "\n- parent params info: "
-                      ^ Print.option_to_string show_params_info
-                          method_def.signature.parent_params_info));
-                  let regions_hierarchy =
-                    LlbcAstUtils.FunIdMap.find (FRegular method_id)
-                      ctx.fun_ctx.regions_hierarchies
-                  in
-                  let tr_self = TraitRef trait_ref in
-                  let inst_sg =
-                    instantiate_fun_sig span ctx all_generics tr_self
-                      method_def.signature regions_hierarchy
-                  in
-                  ( func.func,
-                    func.generics,
-                    Some (all_generics, tr_self),
-                    method_def,
-                    regions_hierarchy,
-                    inst_sg ))
+                  craise __FILE__ __LINE__ span
+                    ("Trait impl is missing method `" ^ method_name
+                   ^ "`, this is an error."))
           | _ ->
               (* We are using a local clause - we lookup the trait decl *)
               let trait_decl =
@@ -862,15 +803,7 @@ let eval_transparent_function_call_symbolic_inst (span : Meta.span)
               in
               (* Lookup the method decl in the required *and* the provided methods *)
               let _, method_id =
-                let provided =
-                  List.filter_map
-                    (fun (id, f) ->
-                      match f with None -> None | Some f -> Some (id, f))
-                    trait_decl.provided_methods
-                in
-                List.find
-                  (fun (s, _) -> s = method_name)
-                  (List.append trait_decl.required_methods provided)
+                List.find (fun (s, _) -> s = method_name) trait_decl.methods
               in
               let method_def = ctx_lookup_fun_decl ctx method_id in
               log#ldebug

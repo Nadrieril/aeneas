@@ -2049,7 +2049,7 @@ let ctx_add_global_decl_and_body (def : A.global_decl) (ctx : extraction_ctx) :
          between the name for the default constant and the name for the field
          in the trait declaration *)
       let suffix =
-        match def.kind with TraitItemProvided _ -> "_default" | _ -> ""
+        match def.kind with TraitItemDecl (_, _, true) -> "_default" | _ -> ""
       in
       let ctx = ctx_add def.item_meta.span decl (name ^ suffix) ctx in
       let ctx = ctx_add def.item_meta.span body (name ^ suffix ^ "_body") ctx in
@@ -2077,17 +2077,10 @@ let ctx_compute_fun_name (def : fun_decl) (ctx : extraction_ctx) : string =
           with
           | None -> def.item_meta
           | Some trait_decl -> (
-              let methods =
-                trait_decl.required_methods
-                @ List.filter_map
-                    (fun (name, opt_id) ->
-                      match opt_id with
-                      | None -> None
-                      | Some id -> Some (name, id))
-                    trait_decl.provided_methods
-              in
               match
-                List.find_opt (fun (name, _) -> name = item_name) methods
+                List.find_opt
+                  (fun (name, _) -> name = item_name)
+                  trait_decl.methods
               with
               | None -> def.item_meta
               | Some (_, id) ->

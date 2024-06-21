@@ -3947,8 +3947,7 @@ let translate_trait_decl (ctx : Contexts.decls_ctx) (trait_decl : A.trait_decl)
     parent_clauses = llbc_parent_clauses;
     consts;
     types;
-    required_methods;
-    provided_methods;
+    methods;
   } : A.trait_decl =
     trait_decl
   in
@@ -3998,8 +3997,7 @@ let translate_trait_decl (ctx : Contexts.decls_ctx) (trait_decl : A.trait_decl)
     llbc_parent_clauses;
     consts;
     types;
-    required_methods;
-    provided_methods;
+    methods;
   }
 
 let translate_trait_impl (ctx : Contexts.decls_ctx) (trait_impl : A.trait_impl)
@@ -4015,8 +4013,7 @@ let translate_trait_impl (ctx : Contexts.decls_ctx) (trait_impl : A.trait_impl)
     parent_trait_refs;
     consts;
     types;
-    required_methods;
-    provided_methods;
+    methods;
   } =
     trait_impl
   in
@@ -4068,8 +4065,7 @@ let translate_trait_impl (ctx : Contexts.decls_ctx) (trait_impl : A.trait_impl)
     parent_trait_refs;
     consts;
     types;
-    required_methods;
-    provided_methods;
+    methods;
   }
 
 let translate_global (ctx : Contexts.decls_ctx) (decl : A.global_decl) :
