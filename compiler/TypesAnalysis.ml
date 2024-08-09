@@ -145,15 +145,17 @@ let analyze_full_ty (updated : bool ref) (infos : type_infos)
 
   (* The recursive function which explores the type *)
   let rec analyze (expl_info : expl_info) (ty_info : partial_type_info)
-      (ty : ty) : partial_type_info =
+      (binder_depth : int) (ty : ty) : partial_type_info =
     match ty with
     | TLiteral _ | TNever | TTraitType _ | TDynTrait _ -> ty_info
-    | TVar var_id -> (
+    | TVar var -> (
         (* Update the information for the proper parameter, if necessary *)
         match ty_info.param_infos with
         | None -> ty_info
         | Some param_infos ->
-            let param_info = TypeVarId.nth param_infos var_id in
+            if not (var.dbid = binder_depth) then
+              craise_opt_span __FILE__ __LINE__ None "Type variable not found";
+            let param_info = TypeVarId.nth param_infos var.varid in
             (* Set [under_borrow] *)
             let under_borrow =
               check_update_bool param_info.under_borrow expl_info.under_borrow
@@ -166,7 +168,7 @@ let analyze_full_ty (updated : bool ref) (infos : type_infos)
             (* Update param_info *)
             let param_info = { under_borrow; under_mut_borrow } in
             let param_infos =
-              TypeVarId.update_nth param_infos var_id param_info
+              TypeVarId.update_nth param_infos var.varid param_info
             in
             let param_infos = Some param_infos in
             { ty_info with param_infos })
@@ -193,14 +195,14 @@ let analyze_full_ty (updated : bool ref) (infos : type_infos)
           }
         in
         (* Continue exploring *)
-        analyze expl_info ty_info rty
+        analyze expl_info ty_info binder_depth rty
     | TRawPtr (rty, _) ->
         (* TODO: not sure what to do here *)
-        analyze expl_info ty_info rty
+        analyze expl_info ty_info binder_depth rty
     | TAdt ((TTuple | TAssumed (TBox | TSlice | TArray | TStr)), generics) ->
         (* Nothing to update: just explore the type parameters *)
         List.fold_left
-          (fun ty_info ty -> analyze expl_info ty_info ty)
+          (fun ty_info ty -> analyze expl_info ty_info binder_depth ty)
           ty_info generics.types
     | TAdt (TAdtId adt_id, generics) ->
         (* Lookup the information for this type definition *)
@@ -254,7 +256,7 @@ let analyze_full_ty (updated : bool ref) (infos : type_infos)
                 }
               in
               (* Continue exploring *)
-              analyze expl_info ty_info ty)
+              analyze expl_info ty_info binder_depth ty)
             ty_info params_tys
         in
         (* Return *)
@@ -263,13 +265,13 @@ let analyze_full_ty (updated : bool ref) (infos : type_infos)
         (* Just dive into the arrow *)
         let ty_info =
           List.fold_left
-            (fun ty_info ty -> analyze expl_info ty_info ty)
+            (fun ty_info ty -> analyze expl_info ty_info (binder_depth + 1) ty)
             ty_info inputs
         in
-        analyze expl_info ty_info output
+        analyze expl_info ty_info (binder_depth + 1) output
   in
   (* Explore *)
-  analyze expl_info_init ty_info ty
+  analyze expl_info_init ty_info 0 ty
 
 let type_decl_is_opaque (d : type_decl) : bool =
   match d.kind with

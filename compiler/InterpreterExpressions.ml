@@ -298,7 +298,8 @@ let eval_operand_no_reorganize (config : config) (span : Meta.span)
                 e )
           in
           (v, ctx, cf)
-      | CVar vid ->
+      | CVar var ->
+          (* TODO: check the debruijn index of `var` *)
           let ctx0 = ctx in
           (* In concrete mode: lookup the const generic value.
              In symbolic mode: introduce a fresh symbolic value.
@@ -307,7 +308,7 @@ let eval_operand_no_reorganize (config : config) (span : Meta.span)
              duplicate it.
           *)
           let ctx, cv =
-            let cv = ctx_lookup_const_generic_value ctx vid in
+            let cv = ctx_lookup_const_generic_value ctx var in
             match config.mode with
             | ConcreteMode ->
                 (* Copy the value - this is more of a sanity check *)
@@ -328,7 +329,7 @@ let eval_operand_no_reorganize (config : config) (span : Meta.span)
               ( ctx0,
                 None,
                 value_as_symbolic span cv.value,
-                SymbolicAst.VaCgValue vid,
+                SymbolicAst.VaCgValue var.varid,
                 e )
           in
           (cv, ctx, cf)

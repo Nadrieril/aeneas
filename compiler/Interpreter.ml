@@ -80,9 +80,13 @@ let symbolic_instantiate_fun_sig (span : Meta.span) (ctx : eval_ctx)
   let generics =
     let { regions; types; const_generics; trait_clauses; _ } = sg.generics in
     let regions = List.map (fun _ -> RErased) regions in
-    let types = List.map (fun (v : type_var) -> TVar v.index) types in
+    let types =
+      List.map (fun (v : type_var) -> TVar { dbid = 0; varid = v.index }) types
+    in
     let const_generics =
-      List.map (fun (v : const_generic_var) -> CgVar v.index) const_generics
+      List.map
+        (fun (v : const_generic_var) -> CgVar { dbid = 0; varid = v.index })
+        const_generics
     in
     (* Annoying that we have to generate this substitution here *)
     let r_subst _ = craise __FILE__ __LINE__ span "Unexpected region" in

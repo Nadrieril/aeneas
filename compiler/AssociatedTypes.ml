@@ -125,14 +125,14 @@ let norm_ctx_to_fmt_env (ctx : norm_ctx) : Print.fmt_env =
     global_decls = ctx.global_decls;
     trait_decls = ctx.trait_decls;
     trait_impls = ctx.trait_impls;
-    regions = [];
     generics =
-      {
-        TypesUtils.empty_generic_params with
-        types = ctx.type_vars;
-        const_generics = ctx.const_generic_vars;
-        trait_clauses = [];
-      };
+      [
+        {
+          TypesUtils.empty_generic_params with
+          types = ctx.type_vars;
+          const_generics = ctx.const_generic_vars;
+        };
+      ];
     locals = [];
   }
 
@@ -497,8 +497,9 @@ let ctx_adt_get_inst_norm_field_etypes (span : Meta.span) (ctx : eval_ctx)
 (** Same as [substitute_signature] but normalizes the types *)
 let ctx_subst_norm_signature (span : Meta.span) (ctx : eval_ctx)
     (asubst : RegionGroupId.id -> AbstractionId.id)
-    (r_subst : RegionVarId.id -> RegionId.id) (ty_subst : TypeVarId.id -> ty)
-    (cg_subst : ConstGenericVarId.id -> const_generic)
+    (r_subst : RegionVarId.id -> RegionId.id)
+    (ty_subst : TypeVarId.id de_bruijn_var -> ty)
+    (cg_subst : ConstGenericVarId.id de_bruijn_var -> const_generic)
     (tr_subst : TraitClauseId.id -> trait_instance_id)
     (tr_self : trait_instance_id) (sg : fun_sig)
     (regions_hierarchy : region_var_groups) : inst_fun_sig =

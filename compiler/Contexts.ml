@@ -333,9 +333,10 @@ let ctx_lookup_var_value (span : Meta.span) (ctx : eval_ctx) (vid : VarId.id) :
   env_lookup_var_value span ctx.env vid
 
 (** Retrieve a const generic value in an evaluation context *)
-let ctx_lookup_const_generic_value (ctx : eval_ctx) (vid : ConstGenericVarId.id)
-    : typed_value =
-  Types.ConstGenericVarId.Map.find vid ctx.const_generic_vars_map
+let ctx_lookup_const_generic_value (ctx : eval_ctx)
+    (var : ConstGenericVarId.id de_bruijn_var) : typed_value =
+  (* TODO: check the debruijn index of `var` *)
+  Types.ConstGenericVarId.Map.find var.varid ctx.const_generic_vars_map
 
 (** Update a variable's value in the current frame.
 

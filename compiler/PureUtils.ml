@@ -139,7 +139,10 @@ let ty_substitute (subst : subst) (ty : ty) : ty =
     object
       inherit [_] map_ty
       method! visit_TVar _ var_id = subst.ty_subst var_id
-      method! visit_CgVar _ var_id = subst.cg_subst var_id
+
+      method! visit_CgVar _ var =
+        subst.cg_subst var.varid (* TODO: don't reuse charon's const generics *)
+
       method! visit_Clause _ id = subst.tr_subst id
       method! visit_Self _ = subst.tr_self
     end
@@ -158,7 +161,9 @@ let make_type_subst (vars : type_var list) (tys : ty list) : TypeVarId.id -> ty
 
 let make_const_generic_subst (vars : const_generic_var list)
     (cgs : const_generic list) : ConstGenericVarId.id -> const_generic =
-  Substitute.make_const_generic_subst_from_vars vars cgs
+ fun varid ->
+  (* TODO: don't reuse charon's const generics *)
+  Substitute.make_const_generic_subst_from_vars vars cgs { dbid = 0; varid }
 
 let make_trait_subst (clauses : trait_clause list) (refs : trait_ref list) :
     TraitClauseId.id -> trait_instance_id =

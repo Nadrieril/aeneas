@@ -431,8 +431,7 @@ module Contexts = struct
       global_decls;
       trait_decls;
       trait_impls;
-      regions = [];
-      generics = TypesUtils.empty_generic_params;
+      generics = [];
       locals = [];
     }
 
@@ -463,15 +462,16 @@ module Contexts = struct
       trait_decls;
       trait_impls;
       (* The regions have been transformed to region groups *)
-      regions = [];
       generics =
-        {
-          TypesUtils.empty_generic_params with
-          types = ctx.type_vars;
-          const_generics = ctx.const_generic_vars;
-          (* We don't need the trait clauses so we initialize them to empty *)
-          trait_clauses = [];
-        };
+        [
+          {
+            TypesUtils.empty_generic_params with
+            types = ctx.type_vars;
+            const_generics = ctx.const_generic_vars;
+            (* We don't need the trait clauses so we initialize them to empty *)
+            trait_clauses = [];
+          };
+        ];
       locals;
     }
 

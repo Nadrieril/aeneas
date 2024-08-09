@@ -294,15 +294,13 @@ let bs_ctx_to_fmt_env (ctx : bs_ctx) : Print.fmt_env =
   let global_decls = ctx.global_ctx.llbc_global_decls in
   let trait_decls = ctx.trait_decls_ctx in
   let trait_impls = ctx.trait_impls_ctx in
-  let { regions; _ } : T.generic_params = ctx.fun_decl.signature.generics in
   {
     type_decls;
     fun_decls;
     global_decls;
     trait_decls;
     trait_impls;
-    regions = [ regions ];
-    generics = ctx.fun_decl.signature.generics;
+    generics = [ ctx.fun_decl.signature.generics ];
     locals = [];
   }
 
@@ -488,7 +486,11 @@ let rec translate_sty (span : Meta.span) (ty : T.ty) : ty =
           | T.TArray -> TAdt (TAssumed TArray, generics)
           | T.TSlice -> TAdt (TAssumed TSlice, generics)
           | T.TStr -> TAdt (TAssumed TStr, generics)))
-  | TVar vid -> TVar vid
+  | TVar var ->
+      if var.dbid = 0 then TVar var.varid
+      else
+        craise __FILE__ __LINE__ span
+          "Type variable with nonzero DeBruijn index; are we under a binder?"
   | TLiteral ty -> TLiteral ty
   | TNever -> craise __FILE__ __LINE__ span "Unreachable"
   | TRef (_, rty, _) -> translate span rty
@@ -670,7 +672,11 @@ let rec translate_fwd_ty (span : Meta.span) (type_infos : type_infos)
               craise __FILE__ __LINE__ span
                 "Unreachable: box/vec/option receives exactly one type \
                  parameter"))
-  | TVar vid -> TVar vid
+  | TVar var ->
+      if var.dbid = 0 then TVar var.varid
+      else
+        craise __FILE__ __LINE__ span
+          "Type variable with nonzero DeBruijn index; are we under a binder?"
   | TNever -> craise __FILE__ __LINE__ span "Unreachable"
   | TLiteral lty -> TLiteral lty
   | TRef (_, rty, _) -> translate rty
@@ -772,7 +778,11 @@ let rec translate_back_ty (span : Meta.span) (type_infos : type_infos)
               (* Note that if there is exactly one type, [mk_simpl_tuple_ty]
                * is the identity *)
               Some (mk_simpl_tuple_ty tys_t)))
-  | TVar vid -> wrap (TVar vid)
+  | TVar var ->
+      if var.dbid = 0 then wrap (TVar var.varid)
+      else
+        craise __FILE__ __LINE__ span
+          "Type variable with nonzero DeBruijn index; are we under a binder?"
   | TNever -> craise __FILE__ __LINE__ span "Unreachable"
   | TLiteral lty -> wrap (TLiteral lty)
   | TRef (r, rty, rkind) -> (
@@ -3576,12 +3586,13 @@ and translate_loop (loop : S.loop) (ctx : bs_ctx) : texpression =
     (* Note that we will retrieve the input values later in the [ForwardEnd]
        (and will introduce the outputs at that moment, together with the actual
        call to the loop forward function) *)
-    let generics =
+    let (generics : generic_args) =
       let { types; const_generics; trait_clauses } = ctx.sg.generics in
       let types = List.map (fun (ty : T.type_var) -> TVar ty.T.index) types in
       let const_generics =
         List.map
-          (fun (cg : T.const_generic_var) -> T.CgVar cg.T.index)
+          (fun (cg : T.const_generic_var) ->
+            T.CgVar { dbid = 0; varid = cg.T.index }) (* TODO *)
           const_generics
       in
       let trait_refs =

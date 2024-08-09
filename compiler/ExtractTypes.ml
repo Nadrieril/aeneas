@@ -429,7 +429,8 @@ let extract_const_generic (span : Meta.span) (ctx : extraction_ctx)
       F.pp_print_string fmt s
   | CgValue v -> extract_literal span fmt false inside v
   | CgVar id ->
-      let s = ctx_get_const_generic_var span id ctx in
+      let s = ctx_get_const_generic_var span id.varid ctx in
+      (* TODO *)
       F.pp_print_string fmt s
 
 let extract_literal_type (_ctx : extraction_ctx) (fmt : F.formatter)

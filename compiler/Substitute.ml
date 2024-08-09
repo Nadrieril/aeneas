@@ -32,9 +32,9 @@ let fresh_regions_with_substs ~(fail_if_not_found : bool)
   let r_subst (r : region) =
     match r with
     | RStatic | RErased | RFVar _ -> r
-    | RBVar (bdid, id) ->
-        if bdid = 0 then
-          match rid_subst id with
+    | RBVar var ->
+        if var.dbid = 0 then
+          match rid_subst var.varid with
           | None -> if fail_if_not_found then raise Not_found else r
           | Some r -> RFVar r
         else r
@@ -96,15 +96,16 @@ let ctx_adt_value_get_instantiated_field_types (span : Meta.span)
     **IMPORTANT:** this function doesn't normalize the types.
  *)
 let substitute_signature (asubst : RegionGroupId.id -> AbstractionId.id)
-    (r_subst : RegionVarId.id -> RegionId.id) (ty_subst : TypeVarId.id -> ty)
-    (cg_subst : ConstGenericVarId.id -> const_generic)
+    (r_subst : RegionVarId.id -> RegionId.id)
+    (ty_subst : TypeVarId.id de_bruijn_var -> ty)
+    (cg_subst : ConstGenericVarId.id de_bruijn_var -> const_generic)
     (tr_subst : TraitClauseId.id -> trait_instance_id)
     (tr_self : trait_instance_id) (sg : fun_sig)
     (regions_hierarchy : region_var_groups) : inst_fun_sig =
   let r_subst' (r : region) : region =
     match r with
     | RStatic | RErased | RFVar _ -> r
-    | RBVar (bdid, rid) -> if bdid = 0 then RFVar (r_subst rid) else r
+    | RBVar var -> if var.dbid = 0 then RFVar (r_subst var.varid) else r
   in
   let subst = { r_subst = r_subst'; ty_subst; cg_subst; tr_subst; tr_self } in
   let inputs = List.map (ty_substitute subst) sg.inputs in

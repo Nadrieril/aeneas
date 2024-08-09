@@ -26,18 +26,20 @@ let type_var_id_to_string (env : fmt_env) (id : type_var_id) : string =
   match
     List.find_opt (fun (x : type_var) -> x.index = id) env.generics.types
   with
-  | None -> Print.Types.type_var_id_to_pretty_string id
+  | None -> Print.Types.type_var_id_to_pretty_string { dbid = 0; varid = id }
   | Some x -> Print.Types.type_var_to_string x
 
 let const_generic_var_id_to_string (env : fmt_env) (id : const_generic_var_id) :
     string =
-  (* Note that the regions are not necessarily ordered following their indices *)
+  (* Note that the variables are not necessarily ordered following their indices *)
   match
     List.find_opt
       (fun (x : const_generic_var) -> x.index = id)
       env.generics.const_generics
   with
-  | None -> Print.Types.const_generic_var_id_to_pretty_string id
+  | None ->
+      let var = { Types.dbid = 0; varid = id } in
+      Print.Types.const_generic_var_id_to_pretty_string var
   | Some x -> Print.Types.const_generic_var_to_string x
 
 let var_id_to_string (env : fmt_env) (id : VarId.id) : string =
@@ -57,8 +59,7 @@ let fmt_env_to_llbc_fmt_env (env : fmt_env) : Print.fmt_env =
     global_decls = env.global_decls;
     trait_decls = env.trait_decls;
     trait_impls = env.trait_impls;
-    regions = [];
-    generics = TypesUtils.empty_generic_params;
+    generics = [];
     locals = [];
   }
 
@@ -133,7 +134,7 @@ let type_id_to_string (env : fmt_env) (id : type_id) : string =
 let const_generic_to_string (env : fmt_env) (cg : const_generic) : string =
   match cg with
   | CgGlobal id -> global_decl_id_to_string env id
-  | CgVar id -> const_generic_var_id_to_string env id
+  | CgVar id -> const_generic_var_id_to_string env id.varid (* TODO *)
   | CgValue lit -> literal_to_string lit
 
 let rec ty_to_string (env : fmt_env) (inside : bool) (ty : ty) : string =
