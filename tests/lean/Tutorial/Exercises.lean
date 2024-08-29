@@ -9,6 +9,8 @@ end Primitives
 
 namespace Tutorial.Solutions
 
+-- INSTALLATION: preciser qu'il faut l'extension Lean 4, pas Lean 3!
+
 /- [tutorial::mul2_add1]:
    Source: 'src/lib.rs', lines 11:0-11:31 -/
 def mul2_add1 (x : U32) : Result U32 :=
@@ -257,7 +259,52 @@ theorem list_nth_mut1_spec {T: Type} [Inhabited T] (l : CList T) (i : U32)
   -- Specification of the backward function
   ∀ x', ∃ l', back x' = ok l' ∧ l'.to_list = l.to_list.update i.toNat x' := by
   rw [list_nth_mut1, list_nth_mut1_loop]
-  sorry
+  split
+  . split
+    -- TODO: be careful to use the lean4 not lean3 vscode extension
+    -- TODO: rename_i h0 h1 tl x l
+    -- TODO: stop
+    -- TODO: rename _ = _ => h
+    -- TODO: expliquer variables en gris: on ne peut pas y faire reference, il faut les renommer
+    . simp
+      split_conj
+      . simp [List.index]
+        -- how to type `h✝`, how to name hypotheses that were introduced magically
+        simp_all
+      . intro
+        -- triste de pas pouvoir fiare step by step, e.g. utiliser i=0 etc
+        simp_all
+    . simp
+      -- surpris que simp simplifie pas le `ok = ok`
+      -- comment rentrer dans le `do`?
+      -- comment utiliser x != 0 => x = y + 1?
+      simp_all
+      -- pas mal bloqué là
+      progress as ⟨ y,h ⟩
+      -- TODO:
+      -- have hy : i.toNat - 1 = y.toNat := by scalar_tac
+      -- simp [hy]
+      -- essayé ça au pif, pas compris pk ça marchait mieux que `simp` et que `rw [lint_nth_mut1]`
+      -- je pense important d'expliquer quels lemmes sait utiliser "simp"
+      progress as ⟨ z,f,c,d ⟩
+      -- comment appliquer h dans l'autre sens?
+      -- j'ai fini par regarder la doc et essayer `rewrite [← h]`, ce qui n'a pas marché pcke
+      -- j'avais pas fait gaffe au lifting
+      simp
+      split_conj
+      . simp [c,h]
+      . intro x1
+        progress as ⟨ tl,e ⟩
+        simp [to_list]
+        -- TODO: problem parsing the coercion (remove coercions)
+        -- tenté `have g: ((↑i).toNat - 1 = y.toNat)` sans succès
+        -- tenté scalar_tac
+        simp_all
+  . simp
+    -- question: comment inline `to_list` dans `h`? ok c'était marqué
+    simp at h
+    scalar_tac
+
 
 /- [tutorial::list_tail]: loop 0:
    Source: 'src/lib.rs', lines 118:0-123:1 -/
@@ -299,7 +346,16 @@ theorem list_tail_spec {T : Type} (l : CList T) :
   ∃ back, list_tail T l = ok (CList.CNil, back) ∧
   ∀ tl', ∃ l', back tl' = ok l' ∧ l'.to_list = l.to_list ++ tl'.to_list := by
   rw [list_tail, list_tail_loop]
-  sorry
+  split
+  . simp
+    progress
+    simp
+    intro
+    progress as ⟨ tl,h ⟩
+    simp
+    simp [h]
+  . simp
+  -- tout ce théorème je l'ai fait bourrinement sans comprendre; pe  d'intérêt
 
 /-- Theorem about `append_in_place`: exercise -/
 @[pspec]
@@ -307,8 +363,9 @@ theorem append_in_place_spec {T : Type} (l0 l1 : CList T) :
   ∃ l2, append_in_place T l0 l1 = ok l2 ∧
   l2.to_list = l0.to_list ++ l1.to_list := by
   rw [append_in_place]
-  sorry
-
+  progress as ⟨ l,h ⟩
+  progress
+  progress
 
 /- Big numbers -/
 
@@ -346,6 +403,7 @@ def toInt (x : alloc.vec.Vec U32) : ℤ := toInt_aux x.val
     - if you have lemma (or assumption): `h : ∀ x, P x → Q x`, you can instantiate it and introduce it in
       the context by doing:
       `have h' := h y (by tactic)`
+      -- TODO: isn't it `have h : h y := (by tactic)`? ok no that's a different thing
     - for the proof of termination: look at `i32_id_spec` above
     - if you need to do a case disjunction, use `dcases`
       Ex.: `dcases x = y` will introduce two goals, one with the assumption `x = y` and the
@@ -361,7 +419,46 @@ theorem zero_loop_spec
     (∀ j, i.toNat ≤ j → j < x.length → x'.val.index j = 0#u32) := by
   rw [zero_loop]
   simp
-  sorry
+  split
+  rename_i h2
+  . progress as ⟨i3,h3⟩
+    progress as ⟨i4,h4⟩
+    progress as ⟨vec,h5⟩
+    progress as ⟨ vec2, h6, h7, h8 ⟩
+    progress
+    simp
+    have eq_length : vec.val.length = x.val.length := (by simp [h5])
+    simp [eq_length]
+    split_conj
+    . intro j
+      intro h9
+      -- simp [h7] -- surprised that this didn't make progress
+      have h11 : j < i4.toNat := (by scalar_tac)
+      -- tried `have h12 : h7 j := (by ...)`, didn't work
+      have h12 := h7 j h11 -- `apply h11` didn't work for some reason (I mixed toNat and val). Also `(by h11)` failed
+      simp [h12]
+      simp [h5]
+      simp_all -- lol I gave up precision
+    . intro j
+      intro h9
+      intro h10
+      dcases h11 : i.val = j
+      . -- have h12 : j < i4.val := (by scalar_tac)
+        -- have h13 := h7 j (by simp[h12])
+        -- simp [h13]
+        -- simp [h5]
+        simp_all
+      . have h12 : i4.val <= j := (by scalar_tac)
+        have h13 := h8 j (by scalar_tac)
+        simp_all
+  . simp
+    scalar_tac
+termination_by x.length - i.toNat
+decreasing_by
+  simp_wf
+  simp [h4]
+  simp_all -- celui-là prend vraiment longtemps
+  scalar_tac
 
 /- [tutorial::zero]:
    Source: 'src/lib.rs', lines 5:0-5:28 -/
